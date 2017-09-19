@@ -1,0 +1,135 @@
+Reproducible Research Project 1
+=========================================
+by: Ryan Allen
+
+##Setting Global Options
+```{r globaloptions, echo=TRUE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+```
+
+## Loading Data
+```{r dataload}
+## Reading in the csv file
+data <- read.csv("activity.csv", header = TRUE)
+
+## Formating the date column
+data$date <- as.POSIXct(data$date, format="%Y-%m-%d")
+
+## Making a dataframe with weekday, steps, and intervals
+data <- data.frame(date=data$date,
+        weekday=tolower(weekdays(data$date)), 
+        steps=data$steps, 
+        interval=data$interval)
+
+## Getting a look at the dataframe
+head(data)
+```
+
+## Histogram of Daily Step Counts
+```{r dailystepshistogram}
+## Findin the sum of steps for each day
+dailysteps <- with(data, aggregate(steps, by=list(data$date), sum, na.rm=T))
+
+## Looking at the data
+head(dailysteps)
+
+## Creating the histogram of the total number of steps taken each day
+hist(dailysteps$x, xlab = "Total Daily Steps", main = "Histogram of Total Number of Steps Taken Each Day", col = "green")
+```
+
+### Mean and Median Steps by Day
+```{r meanandmedian}
+## The equations to find the mean and median
+mean <- mean(dailysteps$x)
+median <- median(dailysteps$x)
+```
+The mean is `r mean` and the median is `r median`.
+
+## What is the average daily activity pattern?
+```{r averagepattern}
+## Taking the average of each time interval
+averageData <- with(data, aggregate(steps, by=list(data$interval), mean, na.rm=T))
+
+## Renaming the columns to make the data more manageable
+names(averageData) <- c("Interval","Average.Steps")
+
+
+## Time series graph
+plot(averageData$Interval, averageData$Average.Steps, 
+     type = "l", 
+     col = "black", 
+     xlab="Interval", 
+     ylab = "Average Steps", 
+     main= "Time Series Graph of Number of Steps by Interval")
+```
+
+### Which interval has the highest average steps?
+```{r highestinterval}
+## Finding which entry has the highest average and assigns the interval to max_interval
+max_interval <- averageData[(which(averageData$Average.Steps == max(averageData$Average.Steps))), 1]
+```
+The interval with the most steps day over day is interval `r max_interval`.
+
+
+## Imputing Missing Values
+### Number of Missing Values
+```{r numberNAs}
+## Finding how many NA values there are in the steps column of our data
+NAs <- sum(is.na(data$steps))
+```
+There are `r NAs` missing values in our data set.
+
+### Imputing Values
+```{r impute}
+## In data, find values in steps column = NA and replace with mean of steps
+## This devises the plan and creates a new dataframe with all values replaced
+data1 <- data.frame(date=data$date, 
+                   weekday=(weekdays(data$date)), 
+                   steps=data$steps, 
+                   interval=data$interval)
+
+
+data$steps[is.na(data$steps)] = mean(data$steps, na.rm = TRUE)
+```
+
+### Histogram with missing values imputed with the mean.
+```{r histogramNew}
+## Findin the sum of steps for each day
+dailysteps <- with(data, aggregate(steps, by=list(data$date), sum, na.rm=T))
+
+## Looking at the data
+head(dailysteps)
+
+## Creating the histogram of the total number of steps taken each day
+hist(dailysteps$x, xlab = "Total Daily Steps", main = "Histogram of Total Number of Steps Taken Each Day with Imputed Values", col = "magenta")
+```
+```{r mean&median}
+mean1 <- as.numeric(mean(dailysteps$x))
+median1 <- median(dailysteps$x)
+```
+The new mean is `r mean1` and the new median is `r median`. 
+I would say it has a slight impact, raising both the mean and median by a couple hundred points each and it made our histogram more normallly distributed.
+
+## Difference between weekdays and weekends
+```{r daytype}
+## this adds a factor column in our data set with the type of day
+data1 <- cbind(data, type= ifelse(data$weekday=="Saturday" | data$weekday == "Sunday", "weekend", "weekday"))
+
+## This finds the average steps of each interval across type and weekday
+averageData1 <- aggregate(data1$steps, by=list(data1$weekday, data1$type, data1$interval), mean)
+
+## Replaces the names in the new dataframe with the appropriate title
+names(averageData1) = c("Day","Type", "Interval","Average.Steps")
+
+## Graph the time plot using lattice and the layout option
+library(lattice)
+plot <-xyplot(Average.Steps~Interval|Type, averageData1, type = "l", xlab = "Interval", ylab = "Average Steps",layout = c(1,2))
+print(plot)
+```
+
+
+
+
+
+
